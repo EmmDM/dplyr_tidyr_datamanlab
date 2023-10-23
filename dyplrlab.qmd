@@ -1,0 +1,120 @@
+---
+title: "Dplyr and Tidyr lab"
+author: "Emmanuel de MOREL"
+format: html
+---
+
+
+```{r, echo=FALSE, message=FALSE}
+library(here)
+library(dplyr)
+library(tidyr)
+library(knitr)
+library(ggplot2)
+```
+Exercise 1
+```{r, echo=FALSE, message=FALSE}
+spotify <- readRDS("top-spotify-hits-2000-2019.Rds") 
+```
+
+```{r, echo=FALSE, message=FALSE}
+#Question I
+distinct_songs <- spotify %>% distinct(song, artist,genre, .keep_all = TRUE)  %>% count()
+unique_distinct_songs <- distinct_songs$n
+
+distinct_artists <- spotify %>% distinct(artist) %>% count()
+unique_distinct_artists <- distinct_artists$n
+
+distinct_genre <- spotify %>% distinct(genre) %>% count()
+unique_distinct_genre <- distinct_genre$n
+```
+
+
+The data set contains 1926 songs, 59 genres, 835 artists. 
+Then, I computed the number of distinct artists per year. 
+
+```{r, echo=FALSE, message=FALSE}
+#Question II
+distinct_year <- spotify %>% distinct(year,artist, .keep_all=TRUE) %>% group_by(year) %>% count() %>% rename ("number of artists"= n)
+
+knitr::kable(distinct_year)
+```
+
+Then, I computed the number of distinct artists per year. 
+```{r, echo=FALSE, message=FALSE}
+#Question III
+most_popular <- spotify %>% distinct(song, artist, .keep_all = TRUE) %>% group_by(artist) %>% count() %>% arrange(desc(n)) %>% head(1) %>% rename ( "number of songs" = n)
+
+knitr::kable(most_popular)
+```
+The most popular artist in the data set is Rihanna with 23 songs in the data set.
+```{r, echo=FALSE, message=FALSE}
+#Question IV
+tempo_genre <- spotify %>% distinct(artist,song, .keep_all = TRUE) %>% group_by(genre) %>% summarize(min_tempo=min(tempo),max_tempo = max(tempo),mean_tempo =  mean(tempo), median_tempo = median(tempo))
+
+knitr::kable(tempo_genre)
+```
+Here a table of all different genre and some of their values linked with the tempo. The last row "set()" is unclassifiable genre.
+```{r, echo=FALSE, message=FALSE}
+#Question 5
+mean_danceability_liveness_year <- spotify %>% distinct(danceability,liveness, .keep_all=TRUE) %>% group_by(year) %>% summarize(mean_danceability=mean(danceability),mean_liveness = mean(liveness))
+
+
+knitr::kable(mean_danceability_liveness_year)
+
+
+```
+I computed the mean liveness and the mean danceability per year.
+```{r, echo=FALSE, message=FALSE}
+ggplot(mean_danceability_liveness_year,aes(x= `mean_danceability`, y = `mean_liveness`)) + geom_path(linewidth = 0.8, linejoin = "round", aes(colour = year)) + scale_colour_viridis_c(option="inferno") +  labs(title = "The mean liveness as a function of the mean danceability and variation over time")
+
+ggplot(mean_danceability_liveness_year,aes(x= `mean_danceability`, y = `mean_liveness`)) + geom_line(alpha = 0.5) + geom_point() + labs(title = "The mean liveness as a function of the mean danceability") 
+```
+I drew graphs that show the temporal evolution of the mean annual liveness and the mean annual danceability. The first expose with colors the year and thus the evolutuion of the two means. However, this seems to be a less standard representation, because the graph is not read from left to right. So I did another one that just show the link of mean annual liveness and the mean annual danceability without considering a chronoligical evoluation.
+
+```{r, echo=FALSE, message=FALSE}
+dropout <- readRDS("dropout.Rds") 
+```
+Exercise 2
+
+```{r, echo=FALSE, message=FALSE}
+#Question 1 : Compute the median “Admission grade” conditioned both on the Target variable and on the “Marital status”.
+
+conditional_admissiongrade <- dropout %>% group_by(`Target`, `Marital status`)  %>% summarise(median_conditionnal_admissiongrade = median(`Admission grade`))
+
+```
+
+```{r, echo=FALSE, message=FALSE}
+#Question 2 
+
+spe_marital <- conditional_admissiongrade %>% group_by(`Target`,`Marital status`) %>% select(`Target`,`Marital status`, `median_conditionnal_admissiongrade`) %>% pivot_wider(values_from = `median_conditionnal_admissiongrade`, names_from = `Target`)
+
+knitr::kable(spe_marital)
+
+```
+After computing the median of admission grade conditioned both on the Target variable and on the marital status, I transformed this to get four variables : one for the "Marital status", one for each possible value of the Target variable.
+```{r, echo=FALSE, message=FALSE}
+#Question 3   
+conditional_gender <- dropout %>% group_by(`Gender`) %>%  
+  summarise( median_Curricular_units_1st_sem_credited = median(`Curricular units 1st sem (credited)`),
+             median_Curricular_units_1st_sem_enrolled = median(`Curricular units 1st sem (enrolled)`),
+             mean_Curricular_units_1st_sem_evaluations = median(`Curricular units 1st sem (evaluations)`),
+             median_Curricular_units_1st_sem_approved = median(`Curricular units 1st sem (approved)`),
+             median_Curricular_units_1st_sem_grade = median(`Curricular units 1st sem (grade)`),
+             median_Curricular_units_1st_sem_without_evaluations= median(`Curricular units 1st sem (without evaluations)`),
+             median_Curricular_units_2nd_sem_credited = median(`Curricular units 2nd sem (credited)`),
+             median_Curricular_units_2nd_sem_enrolled = median(`Curricular units 2nd sem (enrolled)`),
+             median_Curricular_units_2nd_sem_evaluations = median(`Curricular units 2nd sem (evaluations)`),
+             median_Curricular_units_2nd_sem_approved = median(`Curricular units 2nd sem (approved)`),
+             median_Curricular_units_2nd_sem_grade = median(`Curricular units 2nd sem (grade)`),
+             median_Curricular_units_2nd_sem_without_evaluations = median(`Curricular units 2nd sem (without evaluations)`))
+
+#Question 4 
+
+
+conditional_gender <- conditional_gender %>% pivot_longer (cols = -Gender, names_to = "Units") %>% pivot_wider (names_from = Gender, values_from = value) 
+
+knitr::kable(conditional_gender)
+
+```
+Finally, I computed the conditional median of all variables related to curricular units given the value of the Gender variable. Then, I used pivot_* functions to transform the data in order to get each curricular units for Male and Female. 
